@@ -13,11 +13,9 @@ RUN curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli
 
 RUN mkdir -p /var/www/html && chown -R www-data:www-data /var/www/html
 
-# Remove default pool configuration and add ours
 RUN rm -f /etc/php/*/fpm/pool.d/www.conf
 COPY conf/www.conf /etc/php/8.2/fpm/pool.d/www.conf
 
-# Create run directory for PHP-FPM
 RUN mkdir -p /run/php && chown www-data:www-data /run/php
 
 COPY tools/script.sh /script.sh

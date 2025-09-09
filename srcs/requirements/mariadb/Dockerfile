@@ -8,5 +8,3 @@ RUN    chmod +x /init.sh
 EXPOSE 3306
 
 CMD ["/init.sh"]
-
-# CMD ["mysqld_safe", "--port=3306", "--bind-address=0.0.0.0", "--datadir=/var/lib/mysql"]
