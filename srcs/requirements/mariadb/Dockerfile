@@ -1,9 +1,12 @@
-FROM debian
+FROM debian:12
 
-RUN apt-get update && apt-get install -y mariadb-server && rm -rf /var/lib/apt/lists/*
-
-COPY conf/db.cnf /etc/mysql/mariadb.conf.d/
-COPY tools/init.sh /docker-entrypoint-initdb.d/
+RUN    apt-get update && apt-get install -y sudo 
+RUN    apt-get install -y mariadb-server
+COPY   config/init.sh /init.sh
+RUN    chmod +x /init.sh
 
 EXPOSE 3306
-CMD ["mysqld_safe"]
+
+CMD ["/init.sh"]
+
+# CMD ["mysqld_safe", "--port=3306", "--bind-address=0.0.0.0", "--datadir=/var/lib/mysql"]

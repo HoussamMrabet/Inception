@@ -1,14 +1,30 @@
-FROM debian
+FROM debian:12
 
-RUN apt-get update && apt-get install -y php8.1-fpm php8.1-mysql wget tar && rm -rf /var/lib/apt/lists/*
+ENV DEBIAN_FRONTEND=noninteractive
 
-RUN mkdir -p /var/www/html
+RUN apt-get update && apt-get install -y \
+    php-fpm php-mysql php-cli \
+    mariadb-client curl wget less unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar \
+    && chmod +x wp-cli.phar \
+    && mv wp-cli.phar /usr/local/bin/wp
+
+RUN mkdir -p /var/www/html && chown -R www-data:www-data /var/www/html
+
+# Remove default pool configuration and add ours
+RUN rm -f /etc/php/*/fpm/pool.d/www.conf
+COPY conf/www.conf /etc/php/7.4/fpm/pool.d/www.conf
+
+# Create run directory for PHP-FPM
+RUN mkdir -p /run/php && chown www-data:www-data /run/php
+
+COPY tools/script.sh /script.sh
+RUN chmod +x /script.sh
 
 WORKDIR /var/www/html
 
-RUN wget https://wordpress.org/latest.tar.gz && tar -xvzf latest.tar.gz && rm latest.tar.gz && mv wordpress/* . && rmdir wordpress
-
-COPY conf/www.conf /etc/php/8.1/fpm/pool.d/
-
 EXPOSE 9000
-CMD ["php-fpm8.1", "-F"]
+
+ENTRYPOINT ["/script.sh"]
