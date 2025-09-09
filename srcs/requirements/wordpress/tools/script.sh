@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+sleep 10
+
 echo "Starting WordPress setup..."
 
 cd /var/www/html
