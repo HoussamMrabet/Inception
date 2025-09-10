@@ -37,6 +37,17 @@ services:
     networks:
       - inception
 
+
+  static_website:
+    build: ./requirements/bonus/static_website
+    container_name: static_website
+    env_file: .env
+    ports:
+      - "9999:9999"
+    restart: unless-stopped
+    networks:
+      - inception
+
   adminer:
     build: ./requirements/bonus/adminer
     container_name: adminer
