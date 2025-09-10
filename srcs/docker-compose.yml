@@ -60,6 +60,15 @@ services:
     networks:
       - inception
 
+  monitor:
+    build: ./requirements/bonus/monitor
+    container_name: monitor
+    ports:
+      - "5000:5000"
+    restart: unless-stopped
+    networks:
+      - inception
+
 volumes:
   mariadb:
     name: mariadb
