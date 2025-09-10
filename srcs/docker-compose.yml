@@ -6,7 +6,7 @@ services:
     container_name: mariadb
     env_file: .env
     volumes:
-      - mariadb_data:/var/lib/mysql
+      - mariadb:/var/lib/mysql
     restart: unless-stopped
     networks:
       - inception
@@ -16,7 +16,7 @@ services:
     container_name: wordpress
     env_file: .env
     volumes:
-      - wordpress_data:/var/www/html
+      - wordpress:/var/www/html
     depends_on:
       - mariadb
     restart: unless-stopped
@@ -30,7 +30,7 @@ services:
     ports:
       - "443:443"
     volumes:
-      - wordpress_data:/var/www/html
+      - wordpress:/var/www/html
     depends_on:
       - wordpress
     restart: unless-stopped
@@ -38,8 +38,21 @@ services:
       - inception
 
 volumes:
-  mariadb_data:
-  wordpress_data:
+  mariadb:
+    name: mariadb
+    driver: local
+    driver_opts:
+      type: "none"
+      o: "bind"
+      device: "/home/oubet/data/mariadb"
+
+  wordpress:
+    name: wordpress
+    driver: local
+    driver_opts:
+      type: "none"
+      o: "bind"
+      device: "/home/oubet/data/wordpress"
 
 networks:
   inception:
