@@ -88,6 +88,8 @@ services:
     restart: unless-stopped
     networks:
       - inception
+    volumes:
+      - wordpress:/home/${FTP_USER}/ftp
 
 volumes:
   mariadb:
