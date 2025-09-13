@@ -18,6 +18,10 @@ if [ ! -f .setup_complete ]; then
         --path=/var/www/html \
         --force
 
+    wp config set WP_REDIS_HOST 'redis' --allow-root
+    wp config set WP_REDIS_PORT '6379' --allow-root
+    wp config set WP_CACHE true --allow-root
+
     if ! wp core is-installed --allow-root --path=/var/www/html 2>/dev/null; then
         wp core install \
             --url="$DOMAIN_NAME" \
@@ -39,6 +43,10 @@ if [ ! -f .setup_complete ]; then
     fi
 
     wp user list --allow-root --path=/var/www/html
+
+    wp plugin install redis-cache --activate --allow-root --path=/var/www/html
+
+    wp redis enable --allow-root --path=/var/www/html
 
     touch .setup_complete
 fi

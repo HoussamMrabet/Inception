@@ -1,25 +1,27 @@
-FROM python:3.11-slim
+FROM debian:12
 
-# Install required packages
 RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    python3-venv \
     curl \
+    bash \
     && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
+RUN ln -s /usr/bin/python3 /usr/bin/python
+
 WORKDIR /app
 
-# Copy requirements and install Python packages
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY tools/requirements.txt .
+RUN pip3 install --no-cache-dir --break-system-packages -r requirements.txt
 
-# Copy application files
 COPY app/ .
 
-# Create data directory for storing monitoring data
+COPY tools/start-monitor.sh /start-monitor.sh
+RUN chmod +x /start-monitor.sh
+
 RUN mkdir -p /app/data
 
-# Expose port
 EXPOSE 5000
 
-# Run the monitoring service
-CMD ["python", "monitor.py"]
+CMD ["/start-monitor.sh"]

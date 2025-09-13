@@ -215,13 +215,11 @@
 
         <div id="content" style="display: none;">
             <div id="services" class="status-grid">
-                <!-- Services will be populated here -->
             </div>
 
             <div id="alerts" class="alerts-section" style="display: none;">
                 <div class="alerts-header">⚠️ Recent Alerts</div>
                 <div id="alerts-list">
-                    <!-- Alerts will be populated here -->
                 </div>
             </div>
 
@@ -331,13 +329,10 @@
             });
         }
 
-        // Initial load
         updateDashboard();
 
-        // Auto-refresh every 30 seconds
         updateInterval = setInterval(updateDashboard, 30000);
 
-        // Refresh when page becomes visible again
         document.addEventListener('visibilitychange', function() {
             if (!document.hidden) {
                 updateDashboard();

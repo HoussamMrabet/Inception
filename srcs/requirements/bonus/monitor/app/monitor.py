@@ -9,7 +9,6 @@ import os
 
 app = Flask(__name__)
 
-# Monitoring configuration
 MONITORING_TARGETS = [
     {
         'name': 'WordPress Site',
@@ -73,7 +72,6 @@ def check_website(target):
     }
     
     try:
-        # Disable SSL verification for internal services
         response = requests.get(
             target['url'], 
             timeout=target['timeout'],
@@ -107,14 +105,11 @@ def monitor_all_targets():
     for target in MONITORING_TARGETS:
         result = check_website(target)
         
-        # Add to monitoring data
         monitoring_data['checks'].append(result)
         
-        # Keep only last 1000 checks
         if len(monitoring_data['checks']) > 1000:
             monitoring_data['checks'] = monitoring_data['checks'][-1000:]
         
-        # Update summary
         if target['name'] not in monitoring_data['summary']:
             monitoring_data['summary'][target['name']] = {
                 'total_checks': 0,
@@ -134,7 +129,6 @@ def monitor_all_targets():
         else:
             summary['down_count'] += 1
             
-            # Add alert for down services
             alert = {
                 'timestamp': result['timestamp'],
                 'service': target['name'],
@@ -143,17 +137,14 @@ def monitor_all_targets():
             }
             monitoring_data['alerts'].append(alert)
             
-            # Keep only last 100 alerts
             if len(monitoring_data['alerts']) > 100:
                 monitoring_data['alerts'] = monitoring_data['alerts'][-100:]
         
-        # Calculate uptime percentage
         if summary['total_checks'] > 0:
             summary['uptime_percentage'] = round(
                 (summary['up_count'] / summary['total_checks']) * 100, 2
             )
         
-        # Calculate average response time
         recent_checks = [
             check for check in monitoring_data['checks'][-20:] 
             if check['name'] == target['name'] and check['status'] == 'up'
@@ -175,8 +166,8 @@ def api_status():
     """API endpoint for current status"""
     return jsonify({
         'summary': monitoring_data['summary'],
-        'recent_checks': monitoring_data['checks'][-50:],  # Last 50 checks
-        'alerts': monitoring_data['alerts'][-20:],  # Last 20 alerts
+        'recent_checks': monitoring_data['checks'][-50:],
+        'alerts': monitoring_data['alerts'][-20:],
         'timestamp': datetime.now().isoformat()
     })
 
@@ -192,7 +183,7 @@ def api_health():
 
 def run_scheduler():
     """Run the monitoring scheduler in a separate thread"""
-    schedule.every(30).seconds.do(monitor_all_targets)  # Check every 30 seconds
+    schedule.every(30).seconds.do(monitor_all_targets)
     
     while True:
         schedule.run_pending()
@@ -200,16 +191,15 @@ def run_scheduler():
 
 if __name__ == '__main__':
     print("Starting Website Monitor Service")
+    print("Waiting 60 seconds for other containers to be ready...")
+    time.sleep(60)
+    print("Starting monitoring checks...")
     
-    # Load existing data
     load_data()
     
-    # Start monitoring scheduler in background
     scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
     scheduler_thread.start()
     
-    # Run initial check
     monitor_all_targets()
     
-    # Start Flask web server
     app.run(host='0.0.0.0', port=5000, debug=False)

@@ -19,6 +19,7 @@ services:
       - wordpress:/var/www/html
     depends_on:
       - mariadb
+      - redis
     restart: unless-stopped
     networks:
       - inception
@@ -37,6 +38,14 @@ services:
     networks:
       - inception
 
+  redis:
+    build: ./requirements/bonus/redis
+    container_name: redis
+    volumes:
+      - redis:/var/lib/redis
+    restart: unless-stopped
+    networks:
+      - inception
 
   static_website:
     build: ./requirements/bonus/static_website
@@ -85,6 +94,14 @@ volumes:
       type: "none"
       o: "bind"
       device: "/home/oubet/data/wordpress"
+
+  redis:
+    name: redis
+    driver: local
+    driver_opts:
+      type: "none"
+      o: "bind"
+      device: "/home/oubet/data/redis"
 
 networks:
   inception:
