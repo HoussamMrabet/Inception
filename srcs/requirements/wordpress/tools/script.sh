@@ -48,6 +48,9 @@ if [ ! -f .setup_complete ]; then
 
     wp redis enable --allow-root --path=/var/www/html
 
+    chmod -R 755 /var/www/html
+    chown -R www-data:www-data /var/www/html
+
     touch .setup_complete
 fi
 

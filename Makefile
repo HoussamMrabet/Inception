@@ -1,11 +1,15 @@
+COMPOSE_FILE = srcs/docker-compose.yml
+
 all:
-	docker-compose -f srcs/docker-compose.yml up --build -d
+	docker compose -f $(COMPOSE_FILE) up --build -d
 
 down:
-	docker-compose -f srcs/docker-compose.yml down --volumes
+	docker compose -f $(COMPOSE_FILE) down
 
-clean: down
-	docker system prune -af --volumes
+clean:
+	docker compose -f $(COMPOSE_FILE) down --remove-orphans
 
-re: clean all
+fclean:
+	docker compose -f $(COMPOSE_FILE) down --rmi all -v --remove-orphans
 
+re: fclean all

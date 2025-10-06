@@ -7,7 +7,7 @@ services:
     env_file: .env
     volumes:
       - mariadb:/var/lib/mysql
-    restart: unless-stopped
+    restart: on-failure
     networks:
       - inception
 
@@ -20,7 +20,7 @@ services:
     depends_on:
       - mariadb
       - redis
-    restart: unless-stopped
+    restart: on-failure
     networks:
       - inception
 
@@ -34,16 +34,14 @@ services:
       - wordpress:/var/www/html
     depends_on:
       - wordpress
-    restart: unless-stopped
+    restart: on-failure
     networks:
       - inception
 
   redis:
     build: ./requirements/bonus/redis
     container_name: redis
-    volumes:
-      - redis:/var/lib/redis
-    restart: unless-stopped
+    restart: on-failure
     networks:
       - inception
 
@@ -53,7 +51,7 @@ services:
     env_file: .env
     ports:
       - "9999:9999"
-    restart: unless-stopped
+    restart: on-failure
     networks:
       - inception
 
@@ -65,7 +63,7 @@ services:
       - "8080:8080"
     depends_on:
       - mariadb
-    restart: unless-stopped
+    restart: on-failure
     networks:
       - inception
 
@@ -74,7 +72,7 @@ services:
     container_name: monitor
     ports:
       - "5000:5000"
-    restart: unless-stopped
+    restart: on-failure
     networks:
       - inception
 
@@ -85,7 +83,7 @@ services:
     ports:
       - "21:21"
       - "30000-30009:30000-30009"
-    restart: unless-stopped
+    restart: on-failure
     networks:
       - inception
     volumes:
@@ -108,15 +106,6 @@ volumes:
       o: "bind"
       device: "/home/${USER}/data/wordpress"
 
-  redis:
-    name: redis
-    driver: local
-    driver_opts:
-      type: "none"
-      o: "bind"
-      device: "/home/${USER}/data/redis"
-
 networks:
   inception:
   
-
