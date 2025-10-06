@@ -48,11 +48,11 @@ if [ ! -f .setup_complete ]; then
 
     wp redis enable --allow-root --path=/var/www/html
 
-    chmod -R 755 /var/www/html
-    chown -R www-data:www-data /var/www/html
-
     touch .setup_complete
 fi
+
+chmod -R u=rwx,g=rx,o=rx /var/www/html
+chown -R www-data:www-data /var/www/html
 
 PHP_FPM=$(find /usr/sbin -name "php-fpm*" | head -1)
 exec "$PHP_FPM" -F 
