@@ -1,5 +1,6 @@
 services:
   mariadb:
+    image: "mariadb"
     build: ./requirements/mariadb
     container_name: mariadb
     env_file: .env
@@ -10,6 +11,7 @@ services:
       - inception
 
   wordpress:
+    image: "wordpress"
     build: ./requirements/wordpress
     container_name: wordpress
     env_file: .env
@@ -23,6 +25,7 @@ services:
       - inception
 
   nginx:
+    image: "nginx"
     build: ./requirements/nginx
     container_name: nginx
     env_file: .env
@@ -37,6 +40,7 @@ services:
       - inception
 
   redis:
+    image: "redis"
     build: ./requirements/bonus/redis
     container_name: redis
     restart: on-failure
@@ -44,6 +48,7 @@ services:
       - inception
 
   static_website:
+    image: "static_website"
     build: ./requirements/bonus/static_website
     container_name: static_website
     env_file: .env
@@ -54,6 +59,7 @@ services:
       - inception
 
   adminer:
+    image: "adminer"
     build: ./requirements/bonus/adminer
     container_name: adminer
     env_file: .env
@@ -66,6 +72,7 @@ services:
       - inception
 
   monitor:
+    image: "monitor"
     build: ./requirements/bonus/monitor
     container_name: monitor
     ports:
@@ -75,6 +82,7 @@ services:
       - inception
 
   ftp:
+    image: "ftp"
     build: ./requirements/bonus/ftp
     container_name: ftp
     env_file: .env
@@ -107,4 +115,3 @@ volumes:
 
 networks:
   inception:
-  
