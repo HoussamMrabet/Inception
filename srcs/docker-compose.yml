@@ -80,6 +80,7 @@ services:
     env_file: .env
     ports:
       - "21:21"
+      - "20:20"
       - "30000-30009:30000-30009"
     restart: on-failure
     networks:
