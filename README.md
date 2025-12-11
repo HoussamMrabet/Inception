@@ -1,186 +1,336 @@
-# Inception — 1337 School Project
+# Inception
 
-This repository contains a Docker-based multi-service project built for the 1337 school "Inception" assignment. It demonstrates how to build and orchestrate a simple web stack with optional bonus services (static site, adminer, monitor, redis, ftp). The goal of this README is educational: to explain what each service does, how Docker and Docker Compose work, and some related networking and tooling concepts useful when studying the project.
+*This project has been created as part of the 42 curriculum by hmrabet.*
 
-## Quick summary / contract
+## Description
 
-- Inputs: Docker + docker-compose files under `srcs/` and service Dockerfiles in `srcs/requirements/*`.
-- Outputs: A multi-container environment exposing web services (nginx/WordPress, static website, monitor, adminer, etc.).
-- Success criteria: Containers build and run via `docker-compose`, services reachable on configured host ports.
-- Error modes: missing environment variables in `.env`, ports already in use, or missing host binaries (Docker). See troubleshooting below.
+**Inception** is a system administration project focused on containerization using Docker. The goal is to create a small infrastructure composed of multiple services running in isolated Docker containers, orchestrated using Docker Compose. Each service runs in its own dedicated container built from either Debian or Alpine Linux base images.
 
----
+The project implements a complete LEMP stack (Linux, Nginx, MariaDB, PHP) with WordPress as the content management system, along with several bonus services including Redis cache, FTP server, Adminer database manager, a static website, and a system monitoring dashboard.
 
-## What this repo contains
+This infrastructure demonstrates best practices in containerization, networking, volume management, and secure service configuration, all orchestrated to work seamlessly together in an isolated environment.
 
-Top-level files and folders you'll want to inspect:
+## Project Description
 
-- `srcs/docker-compose.yml` — orchestration of the services
-- `srcs/requirements/*` — Dockerfiles and per-service config (nginx, mariadb, wordpress, etc.)
-- `docs/screenshots/` — intended location for screenshots (place `static_website.png` and `monitor.png` here)
+### Docker in This Project
 
-Important services (from `docker-compose.yml`):
+Docker is the cornerstone technology of this project, providing lightweight containerization for each service. Unlike traditional virtualization, Docker containers share the host OS kernel while maintaining process isolation, making them more efficient and faster to deploy.
 
-- `mariadb` — database for WordPress
-- `wordpress` — WordPress site (depends on mariadb and redis)
-- `nginx` — reverse proxy and TLS termination (exposes 443:443)
-- `static_website` — bonus simple static site (host port 9999)
-- `adminer` — bonus DB admin UI (host port 8080)
-- `monitor` — bonus monitoring web app (host port 5000)
-- `redis` — bonus caching service
-- `ftp` — bonus FTP server and passive port range
+**Key advantages in this project:**
+- **Isolation**: Each service (Nginx, MariaDB, WordPress, etc.) runs in its own container with minimal dependencies
+- **Reproducibility**: The infrastructure can be rebuilt identically on any system supporting Docker
+- **Resource Efficiency**: Containers are lightweight compared to full virtual machines
+- **Scalability**: Services can be easily replicated or modified without affecting others
+- **Version Control**: Infrastructure is defined as code (Dockerfiles and docker-compose.yml)
 
-Note: static_website, adminer, monitor, redis and ftp are included as bonus services in this project.
+### Sources Included in the Project
 
----
+The project structure follows a modular organization:
 
-## Quick start
-
-Prerequisites: Docker Engine and Docker Compose (or Docker Desktop that includes Compose).
-
-Build and run the stack from the repository root:
-
-```bash
-cd srcs
-docker-compose up -d --build
+```
+srcs/
+├── docker-compose.yml          # Orchestration configuration
+├── requirements/
+│   ├── nginx/                  # Web server (HTTPS only)
+│   │   ├── Dockerfile
+│   │   ├── conf/              # Nginx configuration
+│   │   └── tools/             # SSL certificate generation
+│   ├── mariadb/               # Database server
+│   │   ├── Dockerfile
+│   │   └── config/            # Database initialization
+│   ├── wordpress/             # PHP-FPM & WordPress
+│   │   ├── Dockerfile
+│   │   ├── conf/              # PHP-FPM configuration
+│   │   └── tools/             # WordPress setup script
+│   └── bonus/
+│       ├── redis/             # Cache server
+│       ├── ftp/               # FTP server
+│       ├── adminer/           # Database management UI
+│       ├── static_website/    # Static HTML/CSS/JS site
+│       └── monitor/           # System monitoring dashboard
 ```
 
-Check containers:
+### Design Choices
+
+**1. Base Images**: Debian 12 (Bookworm) is used as the base image for most services, providing stability and a comprehensive package ecosystem.
+
+**2. Custom Dockerfiles**: All images are built from scratch rather than using pre-built images (except base OS), ensuring full control over the configuration and security.
+
+**3. Service Architecture**:
+   - **Nginx**: Acts as a reverse proxy handling HTTPS traffic with self-signed TLS certificates
+   - **WordPress + PHP-FPM**: Separated from Nginx following best practices for PHP application deployment
+   - **MariaDB**: Persistent database with automated initialization scripts
+   - **Redis**: Object caching for WordPress to improve performance
+   - **FTP**: Secure file transfer access to WordPress files
+   - **Adminer**: Web-based database administration tool
+   - **Static Website**: Demonstrates hosting multiple sites in the infrastructure
+   - **Monitor**: Real-time system monitoring dashboard built with Python/Flask
+
+**4. Network Configuration**: A custom bridge network (`inception`) isolates all services from the host and other Docker networks, with only necessary ports exposed.
+
+**5. Volume Management**: Persistent data is stored in named volumes with bind mounts to the host filesystem, ensuring data persistence across container restarts.
+
+### Technical Comparisons
+
+#### Virtual Machines vs Docker
+
+| Aspect | Virtual Machines | Docker Containers |
+|--------|-----------------|-------------------|
+| **Architecture** | Full OS with hypervisor | Shared kernel, isolated processes |
+| **Size** | GBs (entire OS) | MBs (application + dependencies) |
+| **Startup Time** | Minutes | Seconds |
+| **Resource Usage** | High (dedicated resources) | Low (shared resources) |
+| **Isolation** | Complete (hardware-level) | Process-level |
+| **Portability** | Limited (hypervisor-dependent) | High (runs anywhere with Docker) |
+| **Use Case** | Full OS isolation needed | Application deployment & microservices |
+
+**In this project**: Docker is preferred because we need lightweight, isolated services that share the same kernel. VMs would be overkill for running a simple LEMP stack and would consume significantly more resources.
+
+#### Secrets vs Environment Variables
+
+| Aspect | Secrets | Environment Variables |
+|--------|---------|----------------------|
+| **Security** | Encrypted at rest and in transit | Stored in plaintext |
+| **Storage** | External secret management | In memory or .env files |
+| **Rotation** | Easy to rotate without rebuilding | Requires container restart |
+| **Visibility** | Limited access control | Visible in container inspect |
+| **Best For** | Passwords, API keys, certificates | Non-sensitive configuration |
+
+**In this project**: Environment variables are used via `.env` files for configuration. For a production environment, Docker Secrets or external secret management (HashiCorp Vault, AWS Secrets Manager) would be more appropriate for sensitive data like database passwords.
+
+#### Docker Network vs Host Network
+
+| Aspect | Docker Network (Bridge) | Host Network |
+|--------|------------------------|--------------|
+| **Isolation** | Services isolated in custom network | Direct host network access |
+| **Port Mapping** | Explicit port mapping required | Uses host ports directly |
+| **Security** | Better (network segmentation) | Lower (exposed to host) |
+| **Performance** | Slight overhead (NAT) | No overhead |
+| **DNS** | Internal DNS resolution | Uses host DNS |
+| **Use Case** | Multi-service apps, microservices | High-performance single service |
+
+**In this project**: A custom bridge network (`inception`) is used to provide:
+- Isolated communication between services
+- Service discovery via DNS (services can reach each other by container name)
+- Security through network segmentation
+- Explicit control over exposed ports (only 443, 8080, 5000, 9999, and FTP ports)
+
+#### Docker Volumes vs Bind Mounts
+
+| Aspect | Docker Volumes | Bind Mounts |
+|--------|----------------|-------------|
+| **Management** | Managed by Docker | Direct host filesystem path |
+| **Location** | Docker internal storage | Specified host directory |
+| **Portability** | More portable | Host-dependent paths |
+| **Performance** | Optimized by Docker | Native filesystem performance |
+| **Backup** | Docker backup tools | Standard filesystem tools |
+| **Use Case** | Database data, production | Development, config files |
+
+**In this project**: A hybrid approach is used:
+- **Named volumes with bind mounts**: Volumes are defined in docker-compose.yml but use bind mount driver options to persist to `/home/${USER}/data/`
+- **Advantages**: 
+  - Data persists on the host filesystem for easy backup
+  - Volumes can be accessed outside Docker
+  - Clear separation of data by service (mariadb/, wordpress/)
+  - Compatible with Docker volume commands while maintaining host access
+
+This configuration provides the best of both worlds: Docker's volume management with direct host filesystem access.
+
+## Instructions
+
+### Prerequisites
+
+- **Docker Engine** (version 20.10 or higher)
+- **Docker Compose** (version 2.0 or higher)
+- **Make** utility
+- **Linux environment** (or WSL2 on Windows)
+- At least 4GB of free RAM
+- At least 10GB of free disk space
+
+### Environment Setup
+
+1. Clone the repository:
+   ```bash
+   git clone <repository-url>
+   cd Inception
+   ```
+
+2. Create a `.env` file in the `srcs/` directory with the following variables:
+   ```bash
+   # Domain Configuration
+   DOMAIN_NAME=<your-domain>.42.fr
+   
+   # MariaDB Configuration
+   MYSQL_ROOT_PASSWORD=<strong-root-password>
+   MYSQL_DATABASE=wordpress
+   MYSQL_USER=<wp-user>
+   MYSQL_PASSWORD=<strong-password>
+   
+   # WordPress Configuration
+   WP_TITLE=<your-site-title>
+   WP_ADMIN_USER=<admin-username>
+   WP_ADMIN_PASSWORD=<strong-admin-password>
+   WP_ADMIN_EMAIL=<admin-email>
+   WP_USER=<regular-user>
+   WP_USER_EMAIL=<user-email>
+   WP_USER_PASSWORD=<user-password>
+   
+   # FTP Configuration
+   FTP_USER=<ftp-username>
+   FTP_PASSWORD=<ftp-password>
+   ```
+
+3. Update your `/etc/hosts` file to resolve your domain locally:
+   ```bash
+   sudo echo "127.0.0.1 <your-domain>.42.fr" >> /etc/hosts
+   ```
+
+### Compilation and Execution
+
+The project uses a Makefile for easy management:
 
 ```bash
-docker-compose ps
+# Build and start all services
+make
+
+# Stop all services (keeps volumes)
+make down
+
+# Clean all services and volumes
+make clean
+
+# Complete cleanup (removes images and all data)
+make fclean
+
+# Rebuild everything from scratch
+make re
 ```
 
-Common access URLs (default ports as configured in `srcs/docker-compose.yml`):
+### Accessing Services
 
-- Static website: http://localhost:9999
-- Monitor UI: http://localhost:5000
-- Adminer: http://localhost:8080
-- nginx (HTTPS): https://localhost (443)
+Once running, access the services at:
 
-To stop the stack:
+- **WordPress**: `https://<your-domain>.42.fr`
+- **Adminer** (Database Manager): `http://localhost:8080`
+- **Static Website**: `http://localhost:9999`
+- **Monitor Dashboard**: `http://localhost:5000`
+- **FTP Server**: `ftp://localhost:21` (credentials from .env)
+
+### Verification
+
+To verify all services are running correctly:
 
 ```bash
-docker-compose down
+# Check running containers
+docker ps
+
+# Check service logs
+docker logs <container-name>
+
+# Check network connectivity
+docker network inspect inception
+
+# Check volumes
+docker volume ls
 ```
 
----
+### Troubleshooting
 
-## Educational explanations
+**Services not starting:**
+- Check logs: `docker logs <container-name>`
+- Verify `.env` file configuration
+- Ensure ports are not already in use
 
-### How Docker and Docker Compose work
+**Connection refused:**
+- Wait for all services to initialize (especially MariaDB)
+- Check service dependencies in docker-compose.yml
 
-Docker is a container runtime that lets you package an application and its dependencies into a lightweight, isolated user-space called a container. A Docker image is a snapshot (read-only) built from a series of filesystem layers; a container is a running instance of an image.
+**Permission errors:**
+- Ensure data directories exist: `/home/${USER}/data/wordpress` and `/home/${USER}/data/mariadb`
+- Check directory permissions
 
-Docker Compose is a tool for defining and running multi-container Docker applications using a single YAML file (`docker-compose.yml`). Compose lets you define services, networks, volumes, and dependencies so you can start the entire stack with a single command (`docker-compose up`). Compose manages container lifecycle (build, run, stop) and wiring (networks and volumes) for you.
+## Resources
 
-Key idea: Docker builds images (repeatable artifacts). Compose uses those images to create a coordinated set of containers with specific configuration (environment variables, exposed ports, volumes, networks, service order).
+### Docker Documentation
+- [Docker Official Documentation](https://docs.docker.com/)
+- [Docker Compose Documentation](https://docs.docker.com/compose/)
+- [Dockerfile Best Practices](https://docs.docker.com/develop/dev-best-practices/)
+- [Docker Networking](https://docs.docker.com/network/)
+- [Docker Volumes](https://docs.docker.com/storage/volumes/)
 
+### Service-Specific Resources
+- [Nginx Documentation](https://nginx.org/en/docs/)
+- [MariaDB Documentation](https://mariadb.com/kb/en/documentation/)
+- [WordPress Documentation](https://wordpress.org/documentation/)
+- [PHP-FPM Configuration](https://www.php.net/manual/en/install.fpm.php)
+- [Redis Documentation](https://redis.io/documentation)
+- [WP-CLI Handbook](https://wp-cli.org/)
 
-### Difference between using a Docker image with and without Docker Compose
+### Tutorials and Articles
+- [Understanding Docker Containers vs VMs](https://www.docker.com/resources/what-container/)
+- [Docker Compose Networking Tutorial](https://docs.docker.com/compose/networking/)
+- [Securing Nginx with SSL](https://www.nginx.com/blog/using-free-ssltls-certificates-from-lets-encrypt-with-nginx/)
+- [WordPress Performance with Redis](https://developer.wordpress.org/advanced-administration/performance/object-cache/)
 
-- Without Compose: You run a single container manually with `docker run`, passing flags for port mapping, volumes, environment vars, and networks. This is fine for simple, single-container use.
+### AI Usage in This Project
 
-- With Compose: You define several services and their relationships in `docker-compose.yml`. Compose automates multi-container start-up (including dependency order), sets up a private network, and reuses named volumes. Compose is better for reproducibility and for coordinating multiple services (e.g., a web app + DB + cache).
+**AI tools were used for the following tasks:**
 
-In short: The image is the same artifact either way. Compose provides orchestration and configuration convenience on top of images.
+1. **Documentation and Research**:
+   - Understanding Docker networking concepts and best practices
+   - Researching optimal configurations for Nginx, MariaDB, and PHP-FPM
+   - Learning about Docker Compose syntax and volume management options
 
+2. **Configuration Optimization**:
+   - Generating initial configuration templates for Nginx and PHP-FPM
+   - Debugging service connection issues between containers
+   - Optimizing Dockerfile instructions for smaller image sizes
 
-### Benefit of Docker compared to Virtual Machines (VMs)
+3. **Script Development**:
+   - Assisting with shell script logic for service initialization
+   - Generating SQL initialization scripts for MariaDB
+   - Creating Python code for the monitoring dashboard
 
-- Lightweight: Containers share the host kernel and have much smaller size compared to full VM images (no guest OS per container).
-- Faster startup: Containers start in milliseconds to seconds, VMs take longer due to booting a full OS.
-- Resource efficiency: Containers isolate applications but allow denser packing on the same host.
-- Portability: A container image bundles your app and dependencies and runs the same across different hosts with Docker installed.
+4. **Troubleshooting**:
+   - Diagnosing container startup failures and networking issues
+   - Resolving permission problems with volume mounts
+   - Debugging WordPress and Redis integration
 
-Trade-offs: containers share the kernel with the host, so kernel-level isolation differs from full hardware virtualization provided by VMs. For some workloads or stronger isolation, VMs or a combination (VM + containers) are used.
+**Parts implemented independently:**
+- Overall infrastructure architecture and service design
+- Security configurations and network topology
+- Custom monitoring dashboard UI/UX
+- FTP server configuration and integration
+- Project-specific business logic and requirements implementation
 
+**AI Impact**: AI tools significantly accelerated the learning curve for Docker-specific syntax and configurations, allowing more focus on architecture and design decisions rather than syntax lookup. However, all configurations were manually reviewed, tested, and adapted to meet project requirements.
 
-### Simple explanation of Docker networks
+## Features
 
-Docker networks connect containers so they can communicate. Compose automatically creates a default network for the services in a compose project. Containers on the same network can reach each other by container name as a hostname. There are several network drivers:
+### Mandatory Services
+- ✅ **Nginx**: HTTPS-only web server with TLS 1.2/1.3
+- ✅ **WordPress + PHP-FPM**: Full CMS installation with WP-CLI
+- ✅ **MariaDB**: Persistent database with automated setup
 
-- bridge (default): a private internal network on the host. Containers communicate through the bridge. Use for standalone deployments on a single host.
-- host: the container uses the host network stack (no network isolation).
-- overlay: used for multi-host networking (Swarm or other orchestrators).
+### Bonus Services
+- ✅ **Redis**: Object caching for WordPress performance
+- ✅ **FTP Server**: Secure file access to WordPress directory
+- ✅ **Adminer**: Web-based database administration
+- ✅ **Static Website**: Custom HTML/CSS/JS portfolio site
+- ✅ **Monitor Dashboard**: Real-time container monitoring with Python/Flask
 
-In this repo, Compose creates an internal network (named `inception` in `docker-compose.yml`). Services talk to each other by name (e.g., `wordpress` can reach `mariadb` at hostname `mariadb`). To expose services to your host machine, `ports` mappings are used (e.g., `9999:9999`).
+### Infrastructure Features
+- Secure isolated network with service discovery
+- Persistent data storage with bind-mounted volumes
+- Automatic container restart on failure
+- One-command deployment with Makefile
+- Comprehensive logging for all services
+- Custom domain support with SSL certificates
 
----
+## License
 
-## Project components explained
+This project is part of the 42 School curriculum and is intended for educational purposes.
 
-### Nginx (reverse proxy, TLS)
+## Author
 
-Nginx is a high-performance HTTP server and reverse proxy. In this project it sits in front of the WordPress container, forwarding incoming requests to the appropriate backend and terminating TLS/SSL. TLS (Transport Layer Security) provides encryption between clients and the server. To enable TLS you need X.509 certificates (public+private key). In local development you may generate self-signed certificates for testing; browsers will show a warning unless the certificate is signed by a trusted CA.
-
-Key responsibilities of nginx in the stack:
-- Serve static assets if needed
-- Proxy requests to WordPress
-- Handle HTTPS (TLS term)
-- Optionally redirect HTTP to HTTPS
-
-
-### WordPress
-
-WordPress is a PHP-based CMS. It needs a database (MariaDB/MySQL). The WordPress container serves the PHP application and stores uploaded files in a volume so data persists across container restarts.
-
-Important configuration points:
-- Database credentials via environment variables
-- Persistent volume for WordPress files (`/var/www/html`)
-- Proper ownership/permissions so PHP can write uploaded files
-
-
-### Redis
-
-Redis is an in-memory key-value store useful for caching. WordPress can use Redis as a persistent page/object cache to improve performance by avoiding repeated database queries. Redis runs as its own service and other services connect to it via the Docker network.
-
-
-### FTP
-
-FTP is used here as a bonus service to practice binding volumes and configuring passive ports. FTP is an older protocol with plaintext credentials unless wrapped in TLS (FTPS). For many modern workflows, SFTP (SSH File Transfer Protocol) is preferred.
-
-
-### Adminer
-
-Adminer is a lightweight database management web UI similar to phpMyAdmin. It makes it easy to inspect the MariaDB database from the browser.
-
-
-### Static website — Tic Tac Toe (bonus)
-
-- The `static_website` service hosts a client-side Tic Tac Toe game implemented in vanilla JavaScript (see `srcs/requirements/bonus/static_website/app/`).
-- Features: interactive 3x3 board, optional AI opponent, local score saving via localStorage, simple animations and responsive UI. The game is served as static files and demonstrates building and serving static content from a container (host port `9999` by default).
-
-### Monitor — Flask-based health checker (bonus)
-
-- The `monitor` service is a small Flask web application that continuously checks other services and presents a dashboard (see `srcs/requirements/bonus/monitor/app/`). It was added as the project's custom bonus service.
-- Key behavior (implementation highlights):
-	- On startup the monitor waits ~60s to allow other containers to come up, then performs an initial check and starts a scheduler.
-	- Uses the `schedule` library to run `monitor_all_targets` every 30 seconds.
-	- Monitoring targets are defined in `MONITORING_TARGETS` (examples include the WordPress site via nginx, Adminer, and the static website). You can add or change entries there to monitor other endpoints.
-	- For each check the monitor records timestamp, status (`up`, `warning`, `down`), HTTP response code, response time, and any error text.
-	- Results are appended to an in-container JSON file at `/app/data/monitoring.json` (the monitor keeps bounded history for checks and alerts).
-	- When a service is not responding as expected, the monitor generates an alert object (with service name, timestamp, message and severity) and stores it in `monitoring_data['alerts']`.
-	- The app exposes a simple dashboard at `/` and two JSON endpoints used by the UI:
-		- `/api/status` — returns `summary` (per-service stats), recent checks and recent alerts.
-		- `/api/health` — basic health/metadata about the monitor itself.
-	- The dashboard fetches `/api/status` periodically and shows per-service uptime, average response time, last error and a recent alerts list.
-
-This monitor is useful for quickly detecting failing containers and surface information about what failed (timeout, connection error, unexpected status code). It's intentionally lightweight and easy to extend for additional checks or alerting (e.g., email/webhook integrations).
-
----
-
-## Troubleshooting & tips
-
-- If environment variables are missing, check `.env` in the `srcs/` directory (compose uses `env_file: .env`).
-- If ports conflict, change the host-side port mapping in `srcs/docker-compose.yml`.
-- If containers fail to build, inspect logs with `docker-compose logs --tail=100 <service>`.
-- Never commit secrets like private TLS keys or database passwords to the git repository. Use a `.env` excluded from version control.
-
----
-
-## Where to look in the repo
-
-- `srcs/docker-compose.yml` — main orchestration file
-- `srcs/requirements/*` — services and Dockerfiles (nginx, wordpress, mariadb, bonus services)
-- `srcs/requirements/bonus/*` — bonus services: `static_website`, `adminer`, `monitor`, `redis`, `ftp`
+**hmrabet** - 1337 Khouribga Student
